@@ -1,3 +1,34 @@
+This fork hacks in marginally better Handlebars support.
+
+- support one-line blocks inside attr values (conditional attr values)
+- support one-line blocks inside tags (conditional attrs)
+- support `{{>` partials
+- no more `/>`
+- force `\n` at eof
+- force single quote in expressions `{{t 'something'}}`
+
+How to use
+
+- `yarn add [global] prettier-hbs` or
+- `npm [-g] i prettier-hbs`
+
+Specify parser for hbs in your config
+
+```json
+{
+  "overrides": [
+    {
+      "files": "*.hbs",
+      "options": {
+        "parser": "glimmer"
+      }
+    }
+  ]
+}
+```
+
+`$ prettier-hbs [options] [path]`
+
 [![Prettier Banner](https://unpkg.com/prettier-logo@1.0.3/images/prettier-banner-light.svg)](https://prettier.io)
 
 <h2 align="center">Opinionated Code Formatter</h2>

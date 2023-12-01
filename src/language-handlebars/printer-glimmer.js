@@ -158,8 +158,10 @@ function print(path, options, print) {
     case "TextNode": {
       /* if `{{my-component}}` (or any text containing "{{")
        * makes it to the TextNode, it means it was escaped,
-       * so let's print it escaped, ie.; `\{{my-component}}` */
-      let text = node.chars.replaceAll("{{", "\\{{");
+       * so let's print it escaped, ie.; `\{{my-component}}`
+       * let's also turn escaped block sources back */
+
+      let text = node.chars.replaceAll("{{", "\\{{").replaceAll("{_{", "{{");
 
       const attrName = getCurrentAttributeName(path);
 
@@ -173,13 +175,15 @@ function print(path, options, print) {
 
           if (path.parent.type === "ConcatStatement") {
             if (
-              path.previous?.type === "MustacheStatement" &&
+              (path.previous?.type === "MustacheStatement" ||
+                path.previous?.type === "TextNode") &&
               /^\s/.test(text)
             ) {
               leadingSpace = true;
             }
             if (
-              path.next?.type === "MustacheStatement" &&
+              (path.next?.type === "MustacheStatement" ||
+                path.next?.type === "TextNode") &&
               /\s$/.test(text) &&
               formattedClasses !== ""
             ) {
@@ -344,6 +348,14 @@ function print(path, options, print) {
       ];
     }
     case "MustacheCommentStatement": {
+      const uncomment =
+        node.value.startsWith("__uncomment__") &&
+        node.value.endsWith("__uncomment__");
+
+      if (uncomment) {
+        return [node.value.replaceAll("__uncomment__", "")];
+      }
+
       const start = locStart(node);
       const end = locEnd(node);
       // Starts with `{{~`
@@ -375,7 +387,7 @@ function print(path, options, print) {
       return ["<!--", node.value, "-->"];
 
     case "StringLiteral":
-      return printStringLiteral(path, options);
+      return printStringLiteral(path /*, options*/);
 
     case "NumberLiteral":
       return String(node.value);
@@ -417,7 +429,7 @@ function printStartingTag(path, print) {
     attributes.push(line, printBlockParams(node));
   }
 
-  return ["<", node.tag, indent(attributes), printStartingTagEndMarker(node)];
+  return ["<", node.tag, indent(attributes), printStartingTagEndMarker()];
 }
 
 function printChildren(path, options, print) {
@@ -438,11 +450,7 @@ function printChildren(path, options, print) {
   }, "children");
 }
 
-function printStartingTagEndMarker(node) {
-  if (isVoidElement(node)) {
-    return ifBreak([softline, "/>"], [" />", softline]);
-  }
-
+function printStartingTagEndMarker(/*node*/) {
   return ifBreak([softline, ">"], ">");
 }
 
@@ -681,34 +689,20 @@ function generateHardlines(number = 0) {
 /** @typedef {import("../utils/get-preferred-quote.js").Quote} Quote */
 
 /**
- * Prints a string literal with the correct surrounding quotes based on
- * `options.singleQuote` and the number of escaped quotes contained in
- * the string literal. This function is the glimmer equivalent of `printString`
+ * Prints a string literal forcing single quotes, because we already use single quotes
+ * This function is the glimmer equivalent of `printString`
  * in `common/util`, but has differences because of the way escaped characters
  * are treated in hbs string literals.
  */
-function printStringLiteral(path, options) {
+function printStringLiteral(path /*, options*/) {
   const {
     node: { value },
   } = path;
 
-  const quote = getPreferredQuote(
-    value,
-    needsOppositeQuote(path) ? !options.singleQuote : options.singleQuote,
-  );
+  // prefer single
+  const quote = getPreferredQuote(value, true);
 
   return [quote, value.replaceAll(quote, `\\${quote}`), quote];
-}
-
-function needsOppositeQuote(path) {
-  const { ancestors } = path;
-  const level = ancestors.findIndex((node) => node.type !== "SubExpression");
-
-  return (
-    level !== -1 &&
-    ancestors[level + 1].type === "ConcatStatement" &&
-    ancestors[level + 2].type === "AttrNode"
-  );
 }
 
 /* SubExpression print helpers */
