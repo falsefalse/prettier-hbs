@@ -35,7 +35,12 @@ function print(path, options, print) {
     case "Block":
     case "Program":
     case "Template":
-      return group(path.map(print, "body"));
+      const g = group(path.map(print, "body"));
+      if (node.type == "Template") {
+        const { contents } = g;
+        if (Array.isArray(contents)) contents.push({ type: "line", hard: true });
+      }
+      return g;
 
     case "ElementNode": {
       const startingTag = group(printStartingTag(path, print));

@@ -405,7 +405,6 @@ async function formatFiles(context) {
       continue;
     }
 
-    output = output + "\n";
 
     const isDifferent = output !== input;
     let shouldSetCache = !isDifferent;
