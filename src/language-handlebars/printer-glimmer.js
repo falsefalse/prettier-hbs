@@ -34,13 +34,16 @@ function print(path, options, print) {
   switch (node.type) {
     case "Block":
     case "Program":
-    case "Template":
+    case "Template": {
       const g = group(path.map(print, "body"));
-      if (node.type == "Template") {
+      if (node.type === "Template") {
         const { contents } = g;
-        if (Array.isArray(contents)) contents.push({ type: "line", hard: true });
+        if (Array.isArray(contents)) {
+          contents.push({ type: "line", hard: true });
+        }
       }
       return g;
+    }
 
     case "ElementNode": {
       const startingTag = group(printStartingTag(path, print));
@@ -571,6 +574,14 @@ function printElseIfLikeBlock(path, print) {
 
 function printCloseBlock(path, print, options) {
   const { node } = path;
+
+  // handle PartialBlockStatement path hack
+  if (node.path.original.startsWith("> ")) {
+    node.path.original = node.path.original.replaceAll("> ", "");
+    node.path.parts = [node.path.original];
+    // copy the path obj, to bust Map-based prettier cache
+    node.path = { ...node.path };
+  }
 
   if (options.htmlWhitespaceSensitivity === "ignore") {
     const escape = blockStatementHasOnlyWhitespaceInProgram(node)
